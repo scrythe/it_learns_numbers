@@ -69,5 +69,6 @@ class SGD:
                 epoch_cost_history.append(cost)
                 cost_history.append(cost)
             avg_epoch_cost = np.mean(epoch_cost_history)
+            print(avg_epoch_cost)
 
         return cost_history

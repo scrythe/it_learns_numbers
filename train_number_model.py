@@ -28,7 +28,7 @@ def create_and_train_network():
         training_images,
         training_labels,
         batch_size=64,
-        desired_avg_cost=0.1,
+        desired_avg_cost=0.05,
     )
     return network
 
