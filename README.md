@@ -1,0 +1,1 @@
+A Neural Network, trained to predict a number of an image. Trained using the [MNIST Dataset](./data/LICENSE)
