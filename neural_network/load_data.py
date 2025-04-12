@@ -12,15 +12,8 @@ def load_images(file):
         # Pixelwerte sind von 0 bis 255 als unsigned Byte gespeichert
         image_data = f.read()
         images = np.frombuffer(image_data, dtype=np.uint8).reshape(n_images, 784).T
-        images = normalise_images(images)
+        images = images / 255  # Zwischen 0 und 1 normalisieren
         return images
-
-
-def normalise_images(images):
-    images = (
-        images.reshape(images.shape[0], -1).astype(np.float32) - 127.5
-    ) / 127.5  # Zwischen -1 und 1
-    return images
 
 
 def load_labels(file):
