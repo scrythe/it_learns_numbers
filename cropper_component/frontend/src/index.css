@@ -1,0 +1,8 @@
+body {
+  margin: 0;
+  height: 700px;
+}
+
+cropper-canvas {
+  height: 700px;
+}
