@@ -7,6 +7,7 @@ import numpy as np
 import mimetypes
 import pickle
 import matplotlib.pyplot as plt
+import cv2
 
 
 def load_trained_network():
@@ -17,7 +18,7 @@ def load_trained_network():
 
 def save_image(image):
     fig, _ = plt.subplots()
-    plt.imshow(image.reshape(28, 28), cmap="Greys")
+    plt.imshow(image.reshape(28, 28))
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
@@ -60,6 +61,20 @@ def convert_to_image(image_src):
     return image
 
 
+def preprocess_image(image):
+    resized_image = image.resize((28, 28))
+    image = np.array(resized_image)
+    # Invert image (White becomes Black)
+    image = 255 - image
+    # Mask of image
+    _, mask = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    # image without background noise removed
+    digit_image = cv2.bitwise_and(image, image, mask=mask)
+    # Normalize pixel values to range [0, 1]
+    image = digit_image / 255.0
+    return image
+
+
 network = load_trained_network()
 
 uploaded_image = st.sidebar.file_uploader(
@@ -72,12 +87,8 @@ if uploaded_image:
 
     if cropped_image_src:
         cropped_image = convert_to_image(cropped_image_src)
-        image = cropped_image.resize((28, 28))
-        image = np.array(image)
-        image = 255 - image
-        image = image / 255
-        image = image.reshape(784, 1)
-
+        preprocessed_image = preprocess_image(cropped_image)
+        image = preprocessed_image.reshape(784, 1)
         save_image(image)
         prediction = network.forward_propagation(image)
         save_propability_graph(prediction[:, 0])

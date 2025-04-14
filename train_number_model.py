@@ -23,12 +23,12 @@ def create_and_train_network():
 
     training_images, training_labels = load_trainings_data()
 
-    sgd = SGD(network, learning_rate=0.2)
+    sgd = SGD(network, learning_rate=0.1)
     sgd.train(
         training_images,
         training_labels,
-        batch_size=64,
-        desired_avg_cost=0.2,
+        batch_size=512,
+        desired_avg_cost=0.1,
     )
     return network
 

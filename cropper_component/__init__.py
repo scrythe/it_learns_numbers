@@ -1,7 +1,7 @@
 import streamlit.components.v1 as components
 import os
 
-RELEASE = False
+RELEASE = True
 if not RELEASE:
     _component_func = components.declare_component(
         "cropper_component", url="http://localhost:5173/"
