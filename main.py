@@ -1,13 +1,10 @@
 import streamlit as st
 from PIL import Image
-import base64
-from io import BytesIO
-from cropper_component import cropper_component
 import numpy as np
-import mimetypes
 import pickle
 import matplotlib.pyplot as plt
 import cv2
+from streamlit_cropper import st_cropper
 
 
 def load_trained_network():
@@ -17,8 +14,9 @@ def load_trained_network():
 
 
 def save_image(image):
+    # image = image.reshape(28, 28)
     fig, _ = plt.subplots()
-    plt.imshow(image.reshape(28, 28))
+    plt.imshow(image, cmap="Greys")
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
@@ -42,37 +40,38 @@ def save_propability_graph(prediction):
     st.pyplot(fig)
 
 
-def convert_to_image_src(uploaded_image):
-    image = Image.open(uploaded_image)
-    buffered = BytesIO()
-    image.save(buffered, format=image.format)
-    base64_data = base64.b64encode(buffered.getvalue()).decode()
-    mime, _ = mimetypes.guess_type(uploaded_image.name)
-    if not mime:
-        mime = "image/png"
-    image_src = f"data:{mime};base64,{base64_data}"
-    return image_src
+def roi(image):
+    # Mask of image
+    _, mask = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if contours:
+        largest_contour = max(contours, key=cv2.contourArea)
+        x, y, w, h = cv2.boundingRect(largest_contour)
 
-
-def convert_to_image(image_src):
-    _, base64_data = image_src.split(",", 1)
-    image_data = base64.b64decode(base64_data)
-    image = Image.open(BytesIO(image_data)).convert("L")
-    return image
+        # Crop the image to the bounding rectangle
+        cropped = image[y : y + h, x : x + w]
+        return cropped
 
 
 def preprocess_image(image):
-    resized_image = image.resize((28, 28))
-    image = np.array(resized_image)
-    # Invert image (White becomes Black)
-    image = 255 - image
     # Mask of image
     _, mask = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    # image without background noise removed
+    # Image background noise removed
     digit_image = cv2.bitwise_and(image, image, mask=mask)
     # Normalize pixel values to range [0, 1]
     image = digit_image / 255.0
     return image
+
+
+def add_padding(image, padding):
+    padded_image = np.zeros((28, 28))
+
+    offset = padding // 2
+
+    # Paste the 20x20 digit into the center of the 28x28 canvas
+    padded_image[offset : 28 - offset, offset : 28 - offset] = image
+
+    return padded_image
 
 
 network = load_trained_network()
@@ -82,13 +81,20 @@ uploaded_image = st.sidebar.file_uploader(
 )
 
 if uploaded_image:
-    image_src = convert_to_image_src(uploaded_image)
-    cropped_image_src = cropper_component(image_src)
+    image = Image.open(uploaded_image)
+    cropped_image = st_cropper(image, aspect_ratio=(1, 1)).convert("L")
+    image_data = np.array(cropped_image)
+    # Invert image (White becomes Black)
+    image_data = 255 - image_data
+    cropped_image = roi(image_data)
+    padding = 12
+    resized = cv2.resize(
+        cropped_image, (28 - padding, 28 - padding), interpolation=cv2.INTER_AREA
+    )
+    preprocessed_image = preprocess_image(resized)
+    padded_image = add_padding(preprocessed_image, padding)
 
-    if cropped_image_src:
-        cropped_image = convert_to_image(cropped_image_src)
-        preprocessed_image = preprocess_image(cropped_image)
-        image = preprocessed_image.reshape(784, 1)
-        save_image(image)
-        prediction = network.forward_propagation(image)
-        save_propability_graph(prediction[:, 0])
+    save_image(padded_image)
+    image_data = padded_image.reshape(784, 1)
+    prediction = network.forward_propagation(image_data)
+    save_propability_graph(prediction[:, 0])
